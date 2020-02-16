@@ -130,9 +130,7 @@ fit_BA_pine <- betareg(y.transf.betareg(response) ~ cont_code + dist_stand_scale
 
 simulationOutput <- simulateResiduals(fittedModel = fit_BA_pine, n = 250) # cannot run DHARMA for betareg
 
-plot(simulationOutput)
-
-hist(residuals(simulationOutput))
+plot(residual(fit_BA_pine, type = 'response')) # fit raw residuals of the betareg model
 
 anova(fit_null, fit_BA_pine) # cannot run anova for betareg
 

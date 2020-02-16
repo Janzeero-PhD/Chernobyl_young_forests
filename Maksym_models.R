@@ -71,17 +71,16 @@ ggplot(df.plots, aes(x = (n_micro))) +
 ggplot(df.plots, aes(x = cont_code, y = log(n_large))) +
   geom_point(position = position_jitter())
 
-fit_null <- lm(response ~  dist_stand_scaled + prop_stand_scaled + elevation_scaled + dist_water_scaled, 
-               data = df.plots %>% filter(., response > 0)
+fit_null <- glm(response ~  dist_stand_scaled + prop_stand_scaled + elevation_scaled + dist_water_scaled, 
+               data = df.plots %>% filter(., response > 0), family = poisson(link = "log")
 )
-fit_n_micro <- lm(response ~ cont_code + dist_stand_scaled + prop_stand_scaled + elevation_scaled + dist_water_scaled, 
-                  data = df.plots %>% filter(., response > 0)
+fit_n_micro <- glm(response ~ cont_code + dist_stand_scaled + prop_stand_scaled + elevation_scaled + dist_water_scaled, 
+                  data = df.plots %>% filter(., response > 0), family = poisson(link = "log")
 )
-
 
 simulationOutput <- simulateResiduals(fittedModel = fit_n_micro, n = 250)
 
-plot(simulationOutput)
+plot(simulationOutput) # totally ugly
 
 hist(residuals(fit_n_micro))
 
@@ -115,21 +114,30 @@ ggplot(df.plots, aes(x = (prop_BA_pine))) +
 ggplot(df.plots, aes(x = cont_code, y = (prop_BA_pine))) +
   geom_point(position = position_jitter())
 
-fit_null <- lm(response ~  dist_stand_scaled + prop_stand_scaled + elevation_scaled + dist_water_scaled, 
+library(betareg)
+y.transf.betareg <- function(y){ # function to transform (0..1) distribution to the one suitable for betareg to use
+  n.obs <- sum(!is.na(y))
+  (y * (n.obs - 1) + 0.5) / n.obs
+}
+
+fit_null <- betareg(y.transf.betareg(response) ~  dist_stand_scaled + prop_stand_scaled + elevation_scaled + dist_water_scaled, 
                data = df.plots #%>% filter(., response > 0)
 )
-fit_BA_pine <- lm(response ~ cont_code + dist_stand_scaled + prop_stand_scaled + elevation_scaled + dist_water_scaled, 
+fit_BA_pine <- betareg(y.transf.betareg(response) ~ cont_code + dist_stand_scaled + prop_stand_scaled + elevation_scaled + dist_water_scaled, 
                   data = df.plots #%>% filter(., response > 0)
 )
 
 
-simulationOutput <- simulateResiduals(fittedModel = fit_BA_pine, n = 250)
+simulationOutput <- simulateResiduals(fittedModel = fit_BA_pine, n = 250) # cannot run DHARMA for betareg
 
 plot(simulationOutput)
 
 hist(residuals(simulationOutput))
 
-anova(fit_null, fit_BA_pine)
+anova(fit_null, fit_BA_pine) # cannot run anova for betareg
+
+library(lmtest)
+lrtest(fit_null, fit_BA_pine) # likelihood test... 0.15 = too high :(
 
 summary(fit_BA_pine)
 
